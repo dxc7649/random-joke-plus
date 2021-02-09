@@ -6,7 +6,8 @@
   "scripts": {
     "test": "echo \"Tests complete\"",
     "pretest": "eslint ./src --fix",
-    "start": "node ./src/index.js"
+    "start": "node ./src/index.js",
+    "nodemon" : "nodemon ./src/index.js -e js,html,css" 
   },
   "keywords": [],
   "author": "",
