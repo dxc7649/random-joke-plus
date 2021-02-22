@@ -14,9 +14,16 @@ const htmlHandler = require('./htmlResponses.js');
 const jsonHandler = require('./responses.js');
 
 const urlStruct = {
-  '/random-joke': jsonHandler.getRandomJokeResponse,
-  '/random-jokes': jsonHandler.getRandomJokesResponse,
-  notFound: htmlHandler.get404Response,
+  GET: {
+    '/random-joke': jsonHandler.getRandomJokeResponse,
+    '/random-jokes': jsonHandler.getRandomJokesResponse,
+    '/default-styles.css': htmlHandler.getCSS,
+    notFound: htmlHandler.get404Response,
+  },
+  HEAD: {
+    '/random-joke': jsonHandler.getRandomJokeResponse,
+    '/random-jokes': jsonHandler.getRandomJokesResponse,
+  },
 };
 
 const onRequest = (request, response) => {
@@ -34,10 +41,13 @@ const onRequest = (request, response) => {
   } = params;
   console.log('limit=', limit);
 
-  if (urlStruct[pathname]) {
-    urlStruct[pathname](request, response, params, acceptedTypes);
+  console.dir(parsedUrl.pathname);
+  console.dir(request.method);
+
+  if (urlStruct[request.method][pathname]) {
+    urlStruct[request.method][pathname](request, response, params, acceptedTypes, request.method);
   } else {
-    urlStruct.notFound(request, response, params, acceptedTypes); // send content
+    urlStruct[request.method].notFound(request, response, params, acceptedTypes, request.method);
   }
 };
 

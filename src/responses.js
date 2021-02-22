@@ -67,11 +67,23 @@ let jokes = [
   },
 ];
 
+const getBinarySize = (string) => Buffer.byteLength(string, 'utf8');
+
 const respond = (request, response, content, type) => {
   response.writeHead(200, {
     'Content-Type': type,
   });
   response.write(content);
+  response.end();
+};
+
+const respondMeta = (request, response, type, byteLength) => {
+  const headers = {
+    'Content-Type': type,
+    'Content-Length': byteLength,
+  };
+
+  response.writeHead(200, headers);
   response.end();
 };
 
@@ -83,17 +95,26 @@ const getRandomJokeJSON = () => {
   return jokes[randomNumber];
 };
 
-const getRandomJokeResponse = (request, response, params, acceptedTypes) => {
-  if (acceptedTypes.includes('text/xml') === true) {
-    const jokeXML = getRandomJokeJSON();
+const getRandomJokeResponse = (request, response, params, acceptedTypes, httpmethod) => {
+  const jokeXML = getRandomJokeJSON();
 
-    const responseXML = `
+  const responseXML = `
             <joke>
                 <q>${jokeXML.q}</q>
                 <a>${jokeXML.a}</a>
             </joke>
     `;
+
+  if (acceptedTypes.includes('text/xml') === true && httpmethod === 'GET') {
     return respond(request, response, responseXML, 'text/xml');
+  }
+  if (acceptedTypes.includes('text/xml') === true && httpmethod === 'HEAD') {
+    return respondMeta(request, response, 'text/xml', getBinarySize(responseXML));
+  }
+  if (httpmethod === 'HEAD') {
+    const jokeString = JSON.stringify(getRandomJokeJSON());
+
+    return respondMeta(request, response, 'application/json', getBinarySize(jokeString));
   }
 
   const jokeString = JSON.stringify(getRandomJokeJSON());
@@ -123,8 +144,8 @@ const getRandomJokesJSON = (limit = 1) => {
   return randomJokes;
 };
 
-const getRandomJokesResponse = (request, response, params, acceptedTypes) => {
-  if (acceptedTypes.includes('text/xml') === true) {
+const getRandomJokesResponse = (request, response, params, acceptedTypes, httpmethod) => {
+  if (acceptedTypes.includes('text/xml') === true && httpmethod === 'GET') {
     const jokesXML = getRandomJokesJSON(params.limit);
 
     response.writeHead(200, {
@@ -143,14 +164,37 @@ const getRandomJokesResponse = (request, response, params, acceptedTypes) => {
     response.write('</jokes>');
 
     response.end();
-  } else {
+  } else if (acceptedTypes.includes('text/xml') === true && httpmethod === 'HEAD') {
+    const jokesXML = getRandomJokesJSON(params.limit);
+    let byteSize = 0;
+
+    for (let i = 0; i < jokesXML.length; i += 1) {
+      const byteXML = `<joke>
+                <q>${jokesXML[i].q}</q>
+                <a>${jokesXML[i].a}</a>
+            </joke>
+            `;
+
+      byteSize += getBinarySize(byteXML);
+    }
+
+    return respondMeta(request, response, 'text/xml', byteSize);
+  } else if (httpmethod === 'GET') {
     const jokesString = JSON.stringify(getRandomJokesJSON(params.limit));
     response.writeHead(200, {
       'Content-Type': 'application/json',
     });
     response.write(jokesString);
     response.end();
+
+    const jokesJSON = JSON.stringify(getRandomJokesJSON(params.limit));
+
+    return respondMeta(request, response, 'application/json', getBinarySize(jokesJSON));
   }
+
+  const jokesString = JSON.stringify(getRandomJokesJSON(params.limit));
+
+  return respondMeta(request, response, 'application/json', getBinarySize(jokesString));
 };
 // End of multiple jokes
 
