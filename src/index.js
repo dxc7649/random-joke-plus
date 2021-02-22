@@ -11,7 +11,7 @@ const query = require('querystring');
 const port = process.env.PORT || process.env.NODE_PORT || 3000;
 
 const htmlHandler = require('./htmlResponses.js');
-const jsonHandler = require('./jsonResponses.js');
+const jsonHandler = require('./responses.js');
 
 const urlStruct = {
   '/random-joke': jsonHandler.getRandomJokeResponse,
@@ -19,19 +19,14 @@ const urlStruct = {
   notFound: htmlHandler.get404Response,
 };
 
-// 7 - this is the function that will be called every time a client request comes in
-// this time we will look at the `pathname`, and send back the appropriate page
-// note that in this course we'll be using arrow functions 100% of the time in our server-side code
 const onRequest = (request, response) => {
+  let acceptedTypes = request.headers.accept.split(',');
+  acceptedTypes = acceptedTypes || [];
+
   const parsedUrl = url.parse(request.url);
   const {
     pathname,
   } = parsedUrl;
-    // console.log("parsedUrl=", parsedUrl);
-    // console.log("pathname=", pathname);
-
-  // console.log("params=", params);
-  // console.log("max=", max);
 
   const params = query.parse(parsedUrl.query);
   const {
@@ -40,13 +35,12 @@ const onRequest = (request, response) => {
   console.log('limit=', limit);
 
   if (urlStruct[pathname]) {
-    urlStruct[pathname](request, response, params);
+    urlStruct[pathname](request, response, params, acceptedTypes);
   } else {
-    urlStruct.notFound(request, response, params); // send content
+    urlStruct.notFound(request, response, params, acceptedTypes); // send content
   }
 };
 
-// 8 - create the server, hook up the request handling function, and start listening on `port`
 http.createServer(onRequest).listen(port); // method chaining!
 
 console.log(`Listening on 127.0.0.1: ${port}`);

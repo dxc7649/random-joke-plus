@@ -67,21 +67,41 @@ let jokes = [
   },
 ];
 
-const getRandomJokeJSON = () => {
-  const randomNumber = Math.floor(Math.random() * 16);
-
-  return JSON.stringify(jokes[randomNumber]);
-};
-
-const getRandomJokeResponse = (request, response) => {
+const respond = (request, response, content, type) => {
   response.writeHead(200, {
-    'Content-Type': 'application/json',
+    'Content-Type': type,
   });
-  response.write(getRandomJokeJSON());
+  response.write(content);
   response.end();
 };
 
-// return a array with random jokes
+// One joke
+const getRandomJokeJSON = () => {
+  const randomNumber = Math.floor(Math.random() * 16);
+
+  // return JSON.stringify(jokes[randomNumber]);
+  return jokes[randomNumber];
+};
+
+const getRandomJokeResponse = (request, response, params, acceptedTypes) => {
+  if (acceptedTypes.includes('text/xml') === true) {
+    const jokeXML = getRandomJokeJSON();
+
+    const responseXML = `
+            <joke>
+                <q>${jokeXML.q}</q>
+                <a>${jokeXML.a}</a>
+            </joke>
+    `;
+    return respond(request, response, responseXML, 'text/xml');
+  }
+
+  const jokeString = JSON.stringify(getRandomJokeJSON());
+  return respond(request, response, jokeString, 'application/json');
+};
+// End of One joke
+
+// Multiple jokes
 const getRandomJokesJSON = (limit = 1) => {
   let limit2 = Number(limit);
   const jokesLength = jokes.length;
@@ -100,16 +120,39 @@ const getRandomJokesJSON = (limit = 1) => {
     randomJokes.push(jokes[keys]);
   });
 
-  return JSON.stringify(randomJokes);
+  return randomJokes;
 };
 
-const getRandomJokesResponse = (request, response, params) => {
-  response.writeHead(200, {
-    'Content-Type': 'application/json',
-  });
-  response.write(getRandomJokesJSON(params.limit));
-  response.end();
+const getRandomJokesResponse = (request, response, params, acceptedTypes) => {
+  if (acceptedTypes.includes('text/xml') === true) {
+    const jokesXML = getRandomJokesJSON(params.limit);
+
+    response.writeHead(200, {
+      'Content-Type': 'text/xml',
+    });
+
+    response.write('<jokes>');
+    for (let i = 0; i < jokesXML.length; i += 1) {
+      response.write(`
+            <joke>
+                <q>${jokesXML[i].q}</q>
+                <a>${jokesXML[i].a}</a>
+            </joke>
+        `);
+    }
+    response.write('</jokes>');
+
+    response.end();
+  } else {
+    const jokesString = JSON.stringify(getRandomJokesJSON(params.limit));
+    response.writeHead(200, {
+      'Content-Type': 'application/json',
+    });
+    response.write(jokesString);
+    response.end();
+  }
 };
+// End of multiple jokes
 
 module.exports.getRandomJokeResponse = getRandomJokeResponse;
 module.exports.getRandomJokesResponse = getRandomJokesResponse;
